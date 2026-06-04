@@ -1,0 +1,17 @@
+# Example: vet your dependencies on every pull request.
+# Copy into .github/workflows/pkgguard.yml in YOUR repo.
+name: pkgguard
+on: [pull_request]
+
+jobs:
+  vet:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: Highcrypto7/pkgguard@v1
+        with:
+          files: "requirements.txt package.json"
+          fail-on: danger

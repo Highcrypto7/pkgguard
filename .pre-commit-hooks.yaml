@@ -1,0 +1,8 @@
+- id: pkgguard
+  name: pkgguard — vet AI-recommended packages
+  description: Flag hallucinated, slopsquatted, malicious, or trap-licensed packages in dependency manifests.
+  entry: pkgguard
+  language: python
+  files: '(^|/)(requirements[^/]*\.txt|package\.json)$'
+  args: ['--fail-on', 'danger']
+  pass_filenames: true

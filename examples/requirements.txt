@@ -1,0 +1,5 @@
+requests==2.31.0
+numpy>=1.26
+Flask
+beautifulsoup-4          # hallucinated: real package is beautifulsoup4
+reqeusts                 # typo of requests

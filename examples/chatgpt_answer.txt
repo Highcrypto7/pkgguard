@@ -1,0 +1,11 @@
+Sure! For a FastAPI project that scrapes pages and stores results, here are the
+libraries I'd recommend:
+
+    pip install fastapi uvicorn httpx beautifulsoup4 sqlalchemy
+
+For background jobs you can use `celery` with `redis`. If you want a nice CLI,
+add `typer`. For data work, `pandas` and `numpy` are the standards.
+
+You might also like this scraping helper repo: https://github.com/scrapy/scrapy
+
+And for fast JSON validation, try `fast-jsonschema-validator` (very handy!).

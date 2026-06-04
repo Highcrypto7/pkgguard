@@ -1,0 +1,36 @@
+{
+  "_about": "Labeled benchmark for pkgguard. 'good' entries should end up OK; 'bad' entries (nonexistent, hallucinated, or typosquat names) should be flagged (warn/danger). Extend with the trendmicro/slopsquatting dataset for a larger run.",
+  "entries": [
+    {"name": "requests", "ecosystem": "pypi", "label": "good"},
+    {"name": "numpy", "ecosystem": "pypi", "label": "good"},
+    {"name": "pandas", "ecosystem": "pypi", "label": "good"},
+    {"name": "flask", "ecosystem": "pypi", "label": "good"},
+    {"name": "django", "ecosystem": "pypi", "label": "good"},
+    {"name": "fastapi", "ecosystem": "pypi", "label": "good"},
+    {"name": "scikit-learn", "ecosystem": "pypi", "label": "good"},
+    {"name": "pillow", "ecosystem": "pypi", "label": "good"},
+    {"name": "sqlalchemy", "ecosystem": "pypi", "label": "good"},
+    {"name": "pytest", "ecosystem": "pypi", "label": "good"},
+    {"name": "react", "ecosystem": "npm", "label": "good"},
+    {"name": "express", "ecosystem": "npm", "label": "good"},
+    {"name": "lodash", "ecosystem": "npm", "label": "good"},
+    {"name": "axios", "ecosystem": "npm", "label": "good"},
+    {"name": "typescript", "ecosystem": "npm", "label": "good"},
+
+    {"name": "reqeusts", "ecosystem": "pypi", "label": "bad", "kind": "typosquat", "of": "requests"},
+    {"name": "beautifulsoup-4", "ecosystem": "pypi", "label": "bad", "kind": "hallucination", "of": "beautifulsoup4"},
+    {"name": "djnago", "ecosystem": "pypi", "label": "bad", "kind": "typosquat", "of": "django"},
+    {"name": "numpyy", "ecosystem": "pypi", "label": "bad", "kind": "typosquat", "of": "numpy"},
+    {"name": "python-dateutils", "ecosystem": "pypi", "label": "bad", "kind": "typosquat", "of": "python-dateutil"},
+    {"name": "tensorlfow", "ecosystem": "pypi", "label": "bad", "kind": "typosquat", "of": "tensorflow"},
+    {"name": "super-fast-http-client-helper-xyz", "ecosystem": "pypi", "label": "bad", "kind": "hallucination"},
+    {"name": "auto-ml-easy-pipeline-2024", "ecosystem": "pypi", "label": "bad", "kind": "hallucination"},
+    {"name": "zzz-nonexistent-pkg-001", "ecosystem": "pypi", "label": "bad", "kind": "nonexistent"},
+    {"name": "py-quick-json-validator-pro", "ecosystem": "pypi", "label": "bad", "kind": "hallucination"},
+    {"name": "expresss", "ecosystem": "npm", "label": "bad", "kind": "typosquat", "of": "express"},
+    {"name": "loadsh", "ecosystem": "npm", "label": "bad", "kind": "typosquat", "of": "lodash"},
+    {"name": "reactt", "ecosystem": "npm", "label": "bad", "kind": "typosquat", "of": "react"},
+    {"name": "axioss", "ecosystem": "npm", "label": "bad", "kind": "typosquat", "of": "axios"},
+    {"name": "super-cool-react-hooks-toolkit-xyz", "ecosystem": "npm", "label": "bad", "kind": "hallucination"}
+  ]
+}
