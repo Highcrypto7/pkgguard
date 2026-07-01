@@ -132,6 +132,9 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--scan", action="store_true",
                    help="download package archives and statically scan their "
                         "source for malware signals (no code is executed)")
+    p.add_argument("--policy", action="store_true",
+                   help="flag tools whose *purpose* looks like ToS-abuse/attack "
+                        "(account farms, bypass, DDoS). Heuristic, not supply-chain.")
     p.add_argument("--timeout", type=float, default=8.0,
                    help="per-request timeout in seconds (default: 8)")
     p.add_argument("--json", action="store_true", help="output JSON")
@@ -199,7 +202,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     report = vet_items(
         items,
         offline=args.offline, timeout=args.timeout, deep_fake_stars=args.deep,
-        deep_source=args.scan,
+        deep_source=args.scan, policy=args.policy,
         use_cache=not args.no_cache, cache_ttl=args.cache_ttl,
     )
 

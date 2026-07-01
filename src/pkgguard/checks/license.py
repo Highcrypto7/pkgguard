@@ -12,10 +12,23 @@ Grades here are about commercial/legal risk, not security: traps are ⚠️ (you
 
 from __future__ import annotations
 
+import re
 from typing import Optional, Tuple
 
 from ..models import Ecosystem, Finding, Grade, Severity
 from .base import Check, CheckContext
+
+# Restrictive terms found in the raw text of custom / NOASSERTION licenses that
+# GitHub can't map to a standard SPDX id (common for AI model-weight repos).
+_RESTRICTIVE = re.compile(
+    r"non[- ]?commercial|not for commercial|may not be used commercially|"
+    r"commercial use (?:requires|is not permitted|is prohibited|prohibited)|"
+    r"requires a separate (?:commercial )?license|separate commercial license|"
+    r"research (?:only|purposes|use only)|for research purposes|evaluation only|"
+    r"no redistribution|cc[- ]by[- ]nc|responsible ai license|\bRAIL\b|"
+    r"academic (?:use )?only|personal use only",
+    re.IGNORECASE,
+)
 
 # Ecosystems whose registry response reliably carries license info, so an empty
 # license genuinely means "none declared" rather than "not fetched".
@@ -108,6 +121,14 @@ class LicenseCheck(Check):
             ))
             return
 
+        # Custom / NOASSERTION fallback: GitHub couldn't map this to a standard
+        # SPDX id, so read the actual LICENSE (and README) text and look for
+        # non-commercial / research-only restrictions.
+        custom = self._scan_custom_license(report, ctx)
+        if custom is not None:
+            report.add(custom)
+            return
+
         if low in _NO_LICENSE:
             # Only assert "no license == all rights reserved" for ecosystems whose
             # registry actually reports license metadata. For others (NuGet/Pub/Go
@@ -136,3 +157,37 @@ class LicenseCheck(Check):
             "you need a specific license posture.",
             Grade.OK,
         ))
+
+    def _scan_custom_license(self, report, ctx: CheckContext) -> Optional[Finding]:
+        """Read the raw LICENSE/README text for non-commercial restrictions."""
+        if ctx.offline:
+            return None
+        gh = report.meta.get("github_resolved")
+        if not gh:
+            return None
+        from ..github import fetch_license_text, fetch_readme
+
+        text = fetch_license_text(ctx.http, gh["owner"], gh["repo"]) or ""
+        source, match = "LICENSE", _RESTRICTIVE.search(text)
+        if not match:
+            readme = fetch_readme(ctx.http, gh["owner"], gh["repo"]) or ""
+            # Only trust the README when it actually discusses a license.
+            if "licen" in readme.lower():
+                m2 = _RESTRICTIVE.search(readme)
+                if m2:
+                    source, match, text = "README", m2, readme
+        if not match:
+            return None
+
+        start = max(0, match.start() - 30)
+        snippet = " ".join(text[start:match.end() + 50].split())[:110]
+        report.meta["license"] = "custom/NOASSERTION (restrictive)"
+        return Finding(
+            self.id, Severity.HIGH,
+            "License trap: custom / restrictive (non-commercial signals)",
+            f"GitHub couldn't classify the license (SPDX=NOASSERTION), but the "
+            f"{source} contains restrictive terms — likely non-commercial / "
+            f"research-only, unsafe for a commercial product without a separate "
+            f"license. Evidence: \"...{snippet}...\"",
+            Grade.WARN,
+        )

@@ -3,7 +3,32 @@
 All notable changes to pkgguard are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
-## [0.1.0] — unreleased
+## [0.1.1]
+
+Precision + coverage fixes from real-world use (cross-checking ~230 repos).
+
+### Added
+- **Custom / NOASSERTION license detection.** When GitHub can't map a license to
+  a standard SPDX id, pkgguard now reads the raw `LICENSE`/README text and flags
+  non-commercial / research-only / RAIL restrictions (common for AI model repos,
+  e.g. fish-speech, index-tts) instead of passing them as ✅.
+- **`--policy` (opt-in) purpose check.** Flags tools whose *purpose* is ToS-abuse
+  or attack (account farms, SMS/CAPTCHA-bypass, DDoS stressers, credential
+  stuffers). Fires only on multiple abuse signals in an automation context;
+  backs off for structurally defensive/detection tooling. Explicitly labelled a
+  "policy heuristic, not a supply-chain signal."
+
+### Changed
+- **Fake-star precision.** `--deep` now suppresses reputable owners (microsoft,
+  google, github, huggingface, …) and repos with real adoption (forks tracking
+  stars), and downgrades a lone burst on an established repo to info. A ⚠️ now
+  requires a burst on a new, thin, non-major repo — cutting false positives on
+  normal viral growth while still catching bought-star repos.
+
+### Tests
+- 76 passing (9 new regression tests for the three fixes).
+
+## [0.1.0]
 
 Initial release.
 

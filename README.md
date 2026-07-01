@@ -65,7 +65,7 @@ pkgguard guards exactly that moment.
 
 ## ⚡ What it checks
 
-Every package/repo runs through an ordered pipeline of **10 checks**. The worst
+Every package/repo runs through an ordered pipeline of **11 checks**. The worst
 finding sets the verdict, so a single command gives you one clear answer per item.
 
 | Check | What it catches |
@@ -74,10 +74,11 @@ finding sets the verdict, so a single command gives you one clear answer per ite
 | **Typosquat + homoglyph** | 1–2 edits from a popular package (`reqeusts`→`requests`) and digit/letter look-alikes (`dj4ng0`→`django`) |
 | **Known vulnerabilities** | Open CVEs/advisories for the resolved version via [OSV.dev](https://osv.dev) (GHSA / PyPA / RustSec / RubySec…) |
 | **Source malware scan** *(opt-in `--scan`)* | Statically inspects the package archive for install-time code execution, obfuscated payloads, `child_process`/`os.system`, credential access — **without ever running it** |
-| **License traps** | AGPL / SSPL / BUSL / CC-BY-NC / fair-code / "no license" — landmines for commercial products |
+| **License traps** | AGPL / SSPL / BUSL / CC-BY-NC / fair-code / "no license" — and **custom / NOASSERTION non-commercial licenses** (reads the raw LICENSE text; common for AI model repos) |
 | **Maintenance** | Archived, disabled, deprecated, or long-abandoned projects |
 | **Popularity** | Download counts as a legitimacy signal |
-| **Fake stars** *(opt-in `--deep`)* | Star-count inflation: implausible growth and burst-buying patterns |
+| **Fake stars** *(opt-in `--deep`)* | Star-count inflation — with reputable-owner / real-adoption suppression so normal viral growth isn't flagged |
+| **Purpose / policy** *(opt-in `--policy`)* | Tools whose *purpose* is ToS-abuse/attack (account farms, bypass, DDoS) — a heuristic lens, backs off for defensive/detection tooling |
 | **Repo health** | GitHub stars / last commit / license / archived state for the upstream repo |
 | **Malware metadata** | npm install scripts, freshly-registered look-alikes, packages with no auditable source |
 
@@ -113,6 +114,7 @@ pbpaste | pkgguard --stdin                # macOS
 # go deeper
 pkgguard requirements.txt --scan          # download + statically scan source
 pkgguard some/repo --deep                 # add fake-star analysis
+pkgguard some/repo --policy               # flag abuse/attack-purpose tools
 ```
 
 pkgguard mines free text for `pip install …` / `npm i …` commands, GitHub links,

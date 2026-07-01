@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "pkgguard-cli"
-version = "0.1.0"
+version = "0.1.1"
 description = "Vet the packages and repos your AI assistant recommended — before you install. Catches hallucinated/slopsquatted names, malware signals, license traps, dead repos, and fake-star inflation."
 readme = "README.md"
 requires-python = ">=3.9"

@@ -8,11 +8,35 @@ throttled run degrades to UNKNOWN instead of falsely crying hallucination.
 
 from __future__ import annotations
 
-from typing import Any, Dict, List
+import base64
+from typing import Any, Dict, List, Optional
 
 from ..http import HttpClient
 
 API = "https://api.github.com"
+
+
+def _decode_content(payload: Any, cap: int = 60_000) -> Optional[str]:
+    """Decode a GitHub contents API base64 blob to text (bounded)."""
+    if not isinstance(payload, dict) or payload.get("encoding") != "base64":
+        return None
+    try:
+        raw = base64.b64decode(payload.get("content", ""))
+    except Exception:
+        return None
+    return raw[:cap].decode("utf-8", errors="replace")
+
+
+def fetch_license_text(http: HttpClient, owner: str, repo: str) -> Optional[str]:
+    """Fetch the repo's LICENSE file text (for custom/NOASSERTION licenses)."""
+    data = http.get_json_or_none(f"{API}/repos/{owner}/{repo}/license")
+    return _decode_content(data) if data else None
+
+
+def fetch_readme(http: HttpClient, owner: str, repo: str) -> Optional[str]:
+    """Fetch the repo's README text."""
+    data = http.get_json_or_none(f"{API}/repos/{owner}/{repo}/readme")
+    return _decode_content(data) if data else None
 
 
 def _status_of(resp) -> str:
