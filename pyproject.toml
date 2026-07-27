@@ -4,8 +4,8 @@ build-backend = "hatchling.build"
 
 [project]
 name = "pkgguard-cli"
-version = "0.2.0"
-description = "Vet the packages and repos your AI assistant recommended — before you install. Catches hallucinated/slopsquatted names, malware signals, license traps, dead repos, and fake-star inflation."
+version = "0.2.1"
+description = "Vet the packages and repos your AI assistant recommended — before you install. Catches hallucinated/slopsquatted names, malware signals, license traps (in 25 languages), dead repos, and fake-star inflation. MCP server included. No API key."
 readme = "README.md"
 requires-python = ">=3.9"
 license = { text = "MIT" }
@@ -20,6 +20,10 @@ keywords = [
     "ai-safety",
     "pypi",
     "npm",
+    "mcp",
+    "ai-agents",
+    "license-compliance",
+    "multilingual",
 ]
 classifiers = [
     "Development Status :: 4 - Beta",

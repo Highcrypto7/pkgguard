@@ -207,17 +207,59 @@ Exit codes: `0` clean · `1` a warning (`--fail-on warn`) · `2` a danger.
 ```
 </details>
 
-<details>
-<summary><strong>MCP server — let the assistant check its own answer</strong></summary>
+## 🤖 Use it *through* your AI assistant (MCP)
+
+The highest-leverage way to run pkgguard is to not run it yourself. Register the
+MCP server and the assistant vets a package **before it ever recommends it** —
+slopsquatting stops at the source instead of at your terminal.
 
 ```bash
 pip install "pkgguard-cli[mcp]"
-pkgguard-mcp          # exposes vet_packages() and is_safe_to_install() over MCP
 ```
 
-Register `pkgguard-mcp` in Claude Desktop / Cursor and the assistant can vet a
-package **before it ever recommends it** — stopping slopsquatting at the source.
-</details>
+Then add it to your assistant's MCP config:
+
+**Claude Code** — `claude mcp add pkgguard -- pkgguard-mcp`
+
+**Claude Desktop** (`claude_desktop_config.json`) / **Cursor** (`.cursor/mcp.json`):
+
+```json
+{
+  "mcpServers": {
+    "pkgguard": {
+      "command": "pkgguard-mcp"
+    }
+  }
+}
+```
+
+Two tools are exposed:
+
+| Tool | Use |
+|---|---|
+| `vet_packages(text)` | Pass names, a `requirements.txt` / `package.json` body, or **free text — including the assistant's own draft answer**. Returns a verdict per item with reasons. |
+| `is_safe_to_install(name)` | Fast yes/no gate for one package or `owner/repo`. |
+
+A useful standing instruction for your agent:
+
+> Before recommending or installing any package, call `pkgguard`. Do not suggest
+> anything that comes back `danger`, and surface the reason for anything `warn`.
+
+**It is language-neutral on input.** Paste an assistant's answer in any language —
+the parser reads *structure* (install commands, `owner/repo` slugs, code spans,
+bullet lists), not English prose, so nothing is lost in Korean, Japanese, Spanish,
+Russian or Arabic, and prose words don't leak in as fake package names:
+
+```
+> 웹 스크래핑에는 requests를 쓰세요:
+>   pip install requests
+> 3D 좌석 시야는 github.com/thebuggeddev/football-stadium 참고하세요.
+
+⚠️ WARN  thebuggeddev/football-stadium  License trap: custom / restrictive
+   … the LICENSE contains restrictive terms — unsafe for a commercial product
+✅ OK    requests                        Exists on PyPI (latest 2.34.2)
+```
+
 
 ---
 

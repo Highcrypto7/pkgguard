@@ -3,6 +3,24 @@
 All notable changes to pkgguard are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.2.1]
+
+Docs and discoverability only — no behaviour change.
+
+### Changed
+- **The MCP section is no longer collapsed.** Running pkgguard *through* the
+  assistant is the highest-leverage way to use it, and it was folded inside a
+  `<details>` block. It now has copy-paste config for Claude Code, Claude Desktop
+  and Cursor, the two exposed tools documented, and a suggested standing
+  instruction for the agent.
+- **Documented that input parsing is language-neutral.** The parser reads
+  structure (install commands, `owner/repo` slugs, code spans, bullet lists),
+  not English prose, so an assistant's answer in any language is handled — with
+  a worked Korean example. This was true but undocumented.
+- **Package description and keywords** now mention the 25-language license
+  checking and the MCP server; both were invisible on the PyPI page and in
+  search.
+
 ## [0.2.0]
 
 **License checking is now multilingual (25 languages).** Everything below came
