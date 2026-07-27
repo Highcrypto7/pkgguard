@@ -26,7 +26,52 @@ _RESTRICTIVE = re.compile(
     r"requires a separate (?:commercial )?license|separate commercial license|"
     r"research (?:only|purposes|use only)|for research purposes|evaluation only|"
     r"no redistribution|cc[- ]by[- ]nc|responsible ai license|\bRAIL\b|"
-    r"academic (?:use )?only|personal use only",
+    r"academic (?:use )?only|personal use only|"
+    # --- CJK (v0.1.2) ---------------------------------------------------
+    # Korean/Japanese/Chinese projects routinely ship a hand-written LICENSE
+    # in their own language. GitHub maps it to NOASSERTION and the previous
+    # English-only pattern read it as "unclassifiable" -> silent pass.
+    # Real miss this caught: a tax-automation skill set whose Korean LICENSE
+    # bans resale and paid-service bundling still graded ✅ OK.
+    # Korean. Note the trailing-verb word order: prohibited acts are usually
+    # listed first and negated once at the end ("재판매, 유료 재배포, 유료 서비스
+    # 번들링을 금지합니다"), so anchoring on "<act> 금지" adjacency misses them.
+    # Instead match the act when a negation follows within a short window.
+    r"비상업|비영리|"
+    r"(?:재판매|재배포|번들링|상업적?\s*(?:이용|사용)|영리\s*목적)"
+    r"(?=[^\n]{0,60}?(?:금지|불가|할\s*수\s*없|허용하지\s*않))|"
+    r"연구\s*목적으로만|학술\s*목적으로만|개인적?\s*용도로만|"
+    # Japanese
+    r"非商用|商用利用は?禁止|商用利用不可|営利目的での使用を禁|再配布禁止|"
+    r"研究目的のみ|個人利用のみ|"
+    # Chinese (simplified + traditional)
+    r"非商业|禁止商业|不得用于商业|仅供学习|仅供研究|仅限个人|禁止转售|禁止二次分发|"
+    r"非商業|禁止商業|不得用於商業|僅供學習|僅供研究|僅限個人|禁止轉售",
+    re.IGNORECASE,
+)
+
+# Positive identification of a standard license from the *body* of a custom /
+# NOASSERTION LICENSE file. GitHub reports NOASSERTION whenever its classifier
+# is unsure — including for verbatim MIT text with an unusual copyright line.
+# Without this, such a repo produced no license finding at all ("repo exists"),
+# so a curator had to open the file by hand to learn it was plain MIT.
+_BODY_SIGNATURES = [
+    (re.compile(r"permission is hereby granted, free of charge", re.I), "MIT"),
+    (re.compile(r"apache license[\s,]+version 2\.0", re.I), "Apache-2.0"),
+    (re.compile(r"redistribution and use in source and binary forms", re.I), "BSD"),
+    (re.compile(r"mozilla public license", re.I), "MPL-2.0"),
+    (re.compile(r"\bthe unlicense\b|this is free and unencumbered software", re.I), "Unlicense"),
+    (re.compile(r"internet systems consortium|\bISC License\b", re.I), "ISC"),
+    (re.compile(r"do what the fuck you want", re.I), "WTFPL"),
+]
+
+# Word-boundary matcher for permissive ids. A plain substring test silently
+# swallowed restrictive names that merely *contain* a permissive token — e.g.
+# "Li·mit·ed Commercial License" matched "mit" and was graded
+# "Safe for commercial use", the worst possible direction to be wrong in.
+_PERMISSIVE_RE = re.compile(
+    r"(?<![a-z0-9])(?:mit|bsd|apache|isc|mpl|unlicense|0bsd|zlib|"
+    r"python software foundation|psf)(?![a-z0-9])",
     re.IGNORECASE,
 )
 
@@ -114,7 +159,7 @@ class LicenseCheck(Check):
                 ))
                 return
 
-        if any(p in low for p in _PERMISSIVE):
+        if _PERMISSIVE_RE.search(low):
             report.add(Finding(
                 self.id, Severity.INFO, f"Permissive license ({raw})",
                 "Safe for commercial use.", Grade.OK,
@@ -159,7 +204,18 @@ class LicenseCheck(Check):
         ))
 
     def _scan_custom_license(self, report, ctx: CheckContext) -> Optional[Finding]:
-        """Read the raw LICENSE/README text for non-commercial restrictions."""
+        """Read the raw LICENSE/README text for non-commercial restrictions.
+
+        Two outcomes matter, and both were previously lost:
+
+        * restrictive terms found -> the existing WARN, and
+        * *no* restrictive terms but the body is recognisably a standard
+          permissive license -> say so explicitly (:meth:`_identify_body`).
+
+        Staying silent in the second case is not neutral: it reads as "unknown
+        license" and pushes a curator into a manual file read for what is
+        plainly MIT.
+        """
         if ctx.offline:
             return None
         gh = report.meta.get("github_resolved")
@@ -177,7 +233,9 @@ class LicenseCheck(Check):
                 if m2:
                     source, match, text = "README", m2, readme
         if not match:
-            return None
+            # Nothing restrictive. Before giving up, try to name it positively
+            # from the LICENSE body so the caller gets a usable answer.
+            return self._identify_body(report, text)
 
         start = max(0, match.start() - 30)
         snippet = " ".join(text[start:match.end() + 50].split())[:110]
@@ -191,3 +249,28 @@ class LicenseCheck(Check):
             f"license. Evidence: \"...{snippet}...\"",
             Grade.WARN,
         )
+
+    def _identify_body(self, report, text: str) -> Optional[Finding]:
+        """Name a standard license from the LICENSE body when SPDX is unknown.
+
+        Only fires on a verbatim signature phrase, so it cannot promote a
+        modified or dual-licensed file by accident. Graded OK, but worded so the
+        reader knows the answer came from body text rather than GitHub's
+        classifier — previously this case produced no license finding at all,
+        which reads as "unlicensed" and forces a manual file read.
+        """
+        if not text.strip():
+            return None
+        for pattern, label in _BODY_SIGNATURES:
+            if pattern.search(text):
+                report.meta["license"] = f"{label} (identified from LICENSE body)"
+                return Finding(
+                    self.id, Severity.INFO,
+                    f"Permissive license ({label}, read from LICENSE text)",
+                    "GitHub reported SPDX=NOASSERTION, but the LICENSE body is "
+                    f"verbatim {label} with no restrictive terms — safe for "
+                    "commercial use. Surfaced explicitly because the SPDX field "
+                    "alone would have left this looking unlicensed.",
+                    Grade.OK,
+                )
+        return None
