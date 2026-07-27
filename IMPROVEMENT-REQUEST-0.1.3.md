@@ -1,4 +1,4 @@
-# Improvement requests for 0.1.3
+# Improvement requests (open)
 
 Gaps observed while using pkgguard as the **first gate** on a real curation
 workflow (a 37-source intake batch: 3D/three.js, video tooling, AI infra).
@@ -130,3 +130,34 @@ a license rather than merely flagging suspicion, and **read a license that isn't
 in English**. Both matter because the operator's failure mode is not "misses a
 threat"; it is "gives an answer so incomplete that the human stops trusting the
 tool and reads every LICENSE by hand anyway."
+
+---
+
+## ✅ Closed in 0.2.0 — multilingual license detection
+
+Not on the original list, and the most important item in it. Measuring coverage
+against 15 non-English licenses returned **0/15 detected**: the restrictive
+pattern was English-only, so a hand-written `LICENSE` in Spanish, Russian or
+Thai mapped to `NOASSERTION` and passed as ✅. For a tool that answers "can I use
+this commercially?", staying silent on a whole language is not a soft gap — it
+is a wrong answer, in the dangerous direction, for most of the planet.
+
+Now 25 languages, proximity-based so word order (Korean trailing negation,
+German split verbs, RTL scripts) is handled by one rule rather than per-language
+phrase lists. 0/15 → 15/15, with paired permissive-phrasing tests per language
+and 0 false positives against the real LICENSE files of React, Kubernetes, Rust,
+Django, PyTorch and others.
+
+**Still open from this line of work:**
+- **Report localisation.** Detection is multilingual; findings are still written
+  in English. A Korean or Brazilian developer gets a correct verdict with an
+  English explanation. Deliberate scope call — the verdict is the load-bearing
+  part — but worth revisiting if non-English adoption grows.
+- **The `--policy` purpose check is still English-only.** Its abuse vocabulary
+  (account farms, stressers, credential stuffers) has the same blind spot the
+  license check just fixed. Lower priority: abuse tooling is marketed in English
+  far more consistently than licenses are written in it, but the gap is real and
+  the `license_i18n` structure is directly reusable.
+- **Language coverage is vocabulary, not grammar** — Bengali, Swahili, Tagalog,
+  Malay and others are absent simply because nobody has added the two word lists
+  yet. This is the cheapest possible contribution and a good first issue.

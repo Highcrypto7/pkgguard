@@ -17,38 +17,38 @@ from typing import Optional, Tuple
 
 from ..models import Ecosystem, Finding, Grade, Severity
 from .base import Check, CheckContext
+from .license_i18n import search_restrictive
 
-# Restrictive terms found in the raw text of custom / NOASSERTION licenses that
-# GitHub can't map to a standard SPDX id (common for AI model-weight repos).
-_RESTRICTIVE = re.compile(
-    r"non[- ]?commercial|not for commercial|may not be used commercially|"
-    r"commercial use (?:requires|is not permitted|is prohibited|prohibited)|"
-    r"requires a separate (?:commercial )?license|separate commercial license|"
-    r"research (?:only|purposes|use only)|for research purposes|evaluation only|"
-    r"no redistribution|cc[- ]by[- ]nc|responsible ai license|\bRAIL\b|"
-    r"academic (?:use )?only|personal use only|"
-    # --- CJK (v0.1.2) ---------------------------------------------------
-    # Korean/Japanese/Chinese projects routinely ship a hand-written LICENSE
-    # in their own language. GitHub maps it to NOASSERTION and the previous
-    # English-only pattern read it as "unclassifiable" -> silent pass.
-    # Real miss this caught: a tax-automation skill set whose Korean LICENSE
-    # bans resale and paid-service bundling still graded ✅ OK.
-    # Korean. Note the trailing-verb word order: prohibited acts are usually
-    # listed first and negated once at the end ("재판매, 유료 재배포, 유료 서비스
-    # 번들링을 금지합니다"), so anchoring on "<act> 금지" adjacency misses them.
-    # Instead match the act when a negation follows within a short window.
-    r"비상업|비영리|"
-    r"(?:재판매|재배포|번들링|상업적?\s*(?:이용|사용)|영리\s*목적)"
-    r"(?=[^\n]{0,60}?(?:금지|불가|할\s*수\s*없|허용하지\s*않))|"
-    r"연구\s*목적으로만|학술\s*목적으로만|개인적?\s*용도로만|"
-    # Japanese
-    r"非商用|商用利用は?禁止|商用利用不可|営利目的での使用を禁|再配布禁止|"
-    r"研究目的のみ|個人利用のみ|"
-    # Chinese (simplified + traditional)
-    r"非商业|禁止商业|不得用于商业|仅供学习|仅供研究|仅限个人|禁止转售|禁止二次分发|"
-    r"非商業|禁止商業|不得用於商業|僅供學習|僅供研究|僅限個人|禁止轉售",
+# Human-readable names for the evidence message. Telling the reader the LICENSE
+# was written in Korean is half the explanation of why GitHub gave up on it.
+_LANG_NAMES = {
+    "ko": "Korean", "ja": "Japanese", "zh": "Chinese", "es": "Spanish",
+    "pt": "Portuguese", "fr": "French", "de": "German", "it": "Italian",
+    "nl": "Dutch", "pl": "Polish", "ru": "Russian", "uk": "Ukrainian",
+    "tr": "Turkish", "id": "Indonesian", "vi": "Vietnamese", "th": "Thai",
+    "ar": "Arabic", "hi": "Hindi", "sv": "Swedish", "cs": "Czech",
+    "ro": "Romanian", "el": "Greek", "he": "Hebrew", "fa": "Persian",
+}
+
+# "Does this README talk about licensing at all?" — the gate before trusting a
+# README hit. Latin "licen" misses every non-Latin script, which would have
+# silently disabled the README fallback for exactly the projects this release
+# is meant to serve.
+_LICENSE_WORD = re.compile(
+    r"licen[cs]|licenz|licencia|licença|licence|licenza|licentie|licencja|"
+    r"лиценз|ліценз|lisans|lisensi|giấy phép|ใบอนุญาต|رخصة|ترخيص|लाइसेंस|"
+    r"라이선스|라이센스|이용\s*약관|ライセンス|许可|許可|授权|授權|"
+    r"licens|licenc|licență|άδεια|רישיון",
     re.IGNORECASE,
 )
+
+
+def _mentions_license(text: str) -> bool:
+    return bool(text) and bool(_LICENSE_WORD.search(text))
+
+# NOTE: multilingual restrictive-license detection lives in ``license_i18n``
+# (25 languages, proximity-based). It used to be a single English-only regex
+# here; keeping one source of truth avoids the two drifting apart.
 
 # Positive identification of a standard license from the *body* of a custom /
 # NOASSERTION LICENSE file. GitHub reports NOASSERTION whenever its classifier
@@ -110,7 +110,6 @@ _WEAK_COPYLEFT = [
     ("gnu general public", "GPL"),
 ]
 
-_PERMISSIVE = ("mit", "bsd", "apache", "isc", "mpl", "unlicense", "0bsd", "zlib", "python software foundation", "psf")
 _NO_LICENSE = ("", "unlicensed", "unknown", "noassertion", "other", "proprietary", "see license")
 
 
@@ -224,29 +223,30 @@ class LicenseCheck(Check):
         from ..github import fetch_license_text, fetch_readme
 
         text = fetch_license_text(ctx.http, gh["owner"], gh["repo"]) or ""
-        source, match = "LICENSE", _RESTRICTIVE.search(text)
-        if not match:
+        source, hit = "LICENSE", search_restrictive(text)
+        if not hit:
             readme = fetch_readme(ctx.http, gh["owner"], gh["repo"]) or ""
             # Only trust the README when it actually discusses a license.
-            if "licen" in readme.lower():
-                m2 = _RESTRICTIVE.search(readme)
-                if m2:
-                    source, match, text = "README", m2, readme
-        if not match:
+            if _mentions_license(readme):
+                h2 = search_restrictive(readme)
+                if h2:
+                    source, hit, text = "README", h2, readme
+        if not hit:
             # Nothing restrictive. Before giving up, try to name it positively
             # from the LICENSE body so the caller gets a usable answer.
             return self._identify_body(report, text)
 
-        start = max(0, match.start() - 30)
-        snippet = " ".join(text[start:match.end() + 50].split())[:110]
-        report.meta["license"] = "custom/NOASSERTION (restrictive)"
+        lang = _LANG_NAMES.get(hit.language, hit.language)
+        in_lang = "" if hit.language == "en" else f" (written in {lang})"
+        report.meta["license"] = f"custom/NOASSERTION (restrictive, {hit.language})"
+        report.meta["license_lang"] = hit.language
         return Finding(
             self.id, Severity.HIGH,
             "License trap: custom / restrictive (non-commercial signals)",
             f"GitHub couldn't classify the license (SPDX=NOASSERTION), but the "
-            f"{source} contains restrictive terms — likely non-commercial / "
-            f"research-only, unsafe for a commercial product without a separate "
-            f"license. Evidence: \"...{snippet}...\"",
+            f"{source}{in_lang} contains restrictive terms — likely "
+            f"non-commercial / research-only, unsafe for a commercial product "
+            f"without a separate license. Evidence: \"...{hit.snippet}...\"",
             Grade.WARN,
         )
 

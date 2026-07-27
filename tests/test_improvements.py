@@ -3,7 +3,7 @@
 import pkgguard.github as ghmod
 from pkgguard.checks.base import CheckContext
 from pkgguard.checks.fake_stars import _classify
-from pkgguard.checks.license import _RESTRICTIVE
+from pkgguard.checks.license_i18n import search_restrictive as _RESTRICTIVE_SEARCH
 from pkgguard.checks.policy import PolicyCheck
 from pkgguard.http import HttpClient
 from pkgguard.models import Ecosystem, Grade, Item, ItemReport
@@ -12,10 +12,10 @@ from pkgguard.models import Ecosystem, Grade, Item, ItemReport
 # --- #1 custom / NOASSERTION license -------------------------------------
 
 def test_restrictive_license_regex_matches_non_commercial():
-    assert _RESTRICTIVE.search("Personal, non-commercial use is permitted")
-    assert _RESTRICTIVE.search("Any Commercial use requires a separate license")
-    assert _RESTRICTIVE.search("for research purposes only")
-    assert _RESTRICTIVE.search("Licensed under CC BY-NC 4.0")
+    assert _RESTRICTIVE_SEARCH("Personal, non-commercial use is permitted")
+    assert _RESTRICTIVE_SEARCH("Any Commercial use requires a separate license")
+    assert _RESTRICTIVE_SEARCH("for research purposes only")
+    assert _RESTRICTIVE_SEARCH("Licensed under CC BY-NC 4.0")
 
 
 def test_restrictive_license_regex_ignores_permissive():
@@ -23,8 +23,8 @@ def test_restrictive_license_regex_ignores_permissive():
            "a copy of this software to deal in the Software without restriction")
     apache = ("Apache License Version 2.0. You may reproduce and distribute copies "
               "of the Work in any medium, with or without modifications.")
-    assert not _RESTRICTIVE.search(mit)
-    assert not _RESTRICTIVE.search(apache)
+    assert not _RESTRICTIVE_SEARCH(mit)
+    assert not _RESTRICTIVE_SEARCH(apache)
 
 
 # --- #3 fake-star precision (pure decision) ------------------------------

@@ -3,6 +3,67 @@
 All notable changes to pkgguard are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.2.0]
+
+**License checking is now multilingual (25 languages).** Everything below came
+out of using pkgguard as the first gate on a real curation batch, then asking
+the question the project's motto implies: does this actually work for people who
+don't write their licenses in English?
+
+### Added
+- **Multilingual restrictive-license detection** — new `checks/license_i18n.py`.
+  Arabic, Chinese, Czech, Dutch, English, French, German, Greek, Hebrew, Hindi,
+  Indonesian, Italian, Japanese, Korean, Persian, Polish, Portuguese, Romanian,
+  Russian, Spanish, Swedish, Thai, Turkish, Ukrainian, Vietnamese.
+  Proximity-based (a commercial-use term and a prohibition term co-occurring in
+  a short window, **in either order**) rather than phrase lists, because word
+  order is the actual obstacle: Korean negates once at the end of a list, German
+  splits the verb, Arabic and Hebrew are RTL. Adding a language = two word
+  lists, not a grammar model.
+  Measured before/after on the same 15-language corpus: **0/15 → 15/15**.
+- **Gated commercial use is now a restriction.** "Commercial use requires a
+  separate license" previously passed as unrestricted. Legally a gate, not a
+  ban — but identical in consequence for "can I ship this commercially today,
+  for free?". Covered in 8 languages.
+- **The finding names the language** ("the LICENSE (written in Korean) contains
+  restrictive terms"), which is half the explanation of why GitHub returned
+  NOASSERTION in the first place.
+- **Multilingual README-mentions-a-license gate.** The README fallback was gated
+  on the Latin substring `licen`, which excluded every non-Latin script — it
+  had been silently disabled for exactly the projects this release serves.
+- **Positive license identification from the LICENSE body.** GitHub returns
+  NOASSERTION whenever unsure, including for verbatim MIT with an unusual
+  copyright line. The text was already fetched but discarded unless restrictive,
+  so the repo reported only "repo exists" and a human had to open the file.
+  Verified on `lightningpixel/modly`, now: *"Permissive license (MIT, read from
+  LICENSE text)"*. Signature-phrase matching only, so a modified or dual-licensed
+  file cannot be promoted by accident.
+
+### Fixed
+- **Permissive-license matching now respects word boundaries.** `_PERMISSIVE`
+  was a bare substring test, so `"Limited Commercial License"` matched `mit`
+  inside `Li·mit·ed` and graded ✅ *"Safe for commercial use"* — wrong in the
+  most dangerous direction. That branch also returned early, so the
+  custom-license scan never ran. Also affected any string containing `isc`.
+
+### Changed
+- Single source of truth: the old English-only `_RESTRICTIVE` regex in
+  `checks/license.py` is gone; all restriction matching lives in `license_i18n`.
+
+### Tests
+- **95 → 156.** Every language ships a *pair*: a restrictive phrasing that must
+  be caught and a permissive phrasing in the same language that must not be —
+  because mislabelling MIT as non-commercial is worse than missing a
+  restriction; it teaches the operator to ignore ⚠️.
+- Validated against the real `LICENSE` files of React, Kubernetes, Rust, Django,
+  PyTorch, Next.js, TensorFlow, Spark and others: **0 false positives**, and the
+  three known-restrictive repos still detected.
+
+### Known gaps
+Report text is English-only — detection is multilingual, output localisation is
+not done (deliberate scope call; see README). Other open items, with the repo
+that exposed each, are in `IMPROVEMENT-REQUEST-0.1.3.md`.
+
 ## [0.1.2]
 
 Fixes found by using pkgguard as the first gate on a 37-source curation batch

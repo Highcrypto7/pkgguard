@@ -96,8 +96,8 @@ def test_cjk_restrictive_terms_detected(text):
     Observed miss: a Korean LICENSE explicitly banning resale and paid-service
     bundling graded ✅ OK, because the restrictive pattern was English-only.
     """
-    from pkgguard.checks.license import _RESTRICTIVE
-    assert _RESTRICTIVE.search(text), f"missed restrictive CJK terms in {text!r}"
+    from pkgguard.checks.license_i18n import search_restrictive
+    assert search_restrictive(text), f"missed restrictive CJK terms in {text!r}"
 
 
 @pytest.mark.parametrize("body,label", [

@@ -74,7 +74,7 @@ finding sets the verdict, so a single command gives you one clear answer per ite
 | **Typosquat + homoglyph** | 1–2 edits from a popular package (`reqeusts`→`requests`) and digit/letter look-alikes (`dj4ng0`→`django`) |
 | **Known vulnerabilities** | Open CVEs/advisories for the resolved version via [OSV.dev](https://osv.dev) (GHSA / PyPA / RustSec / RubySec…) |
 | **Source malware scan** *(opt-in `--scan`)* | Statically inspects the package archive for install-time code execution, obfuscated payloads, `child_process`/`os.system`, credential access — **without ever running it** |
-| **License traps** | AGPL / SSPL / BUSL / CC-BY-NC / fair-code / "no license" — and **custom / NOASSERTION non-commercial licenses** (reads the raw LICENSE text; common for AI model repos) |
+| **License traps** | AGPL / SSPL / BUSL / CC-BY-NC / fair-code / "no license" — and **custom / NOASSERTION non-commercial licenses** (reads the raw LICENSE text; common for AI model repos). **Detects restrictions in 25 languages**, not just English — see below |
 | **Maintenance** | Archived, disabled, deprecated, or long-abandoned projects |
 | **Popularity** | Download counts as a legitimacy signal |
 | **Fake stars** *(opt-in `--deep`)* | Star-count inflation — with reputable-owner / real-adoption suppression so normal viral growth isn't flagged |
@@ -85,6 +85,53 @@ finding sets the verdict, so a single command gives you one clear answer per ite
 **Supported ecosystems:** PyPI · npm · crates.io · Go modules · RubyGems · Packagist · NuGet · pub.dev — plus GitHub repos.
 
 ---
+
+## 🌍 License checks work in 25 languages
+
+Open source is global; `LICENSE` files are not always in English. GitHub's
+classifier returns `NOASSERTION` for a hand-written license in Korean, Spanish
+or Russian — and an English-only scanner then reads that as "unclassifiable"
+and passes it as ✅. That is the worst possible outcome for a tool whose whole
+job is answering *"can I use this commercially?"*.
+
+A real example: a Korean `LICENSE` that explicitly bans resale and paid-service
+bundling graded ✅ **OK** before v0.2.0.
+
+```
+⚠️  WARN  lbiz-partners/hometax-doum
+    License trap: custom / restrictive (non-commercial signals)
+    GitHub couldn't classify the license (SPDX=NOASSERTION), but the LICENSE
+    (written in Korean) contains restrictive terms — likely non-commercial /
+    research-only, unsafe for a commercial product without a separate license.
+    Evidence: "...유지한 비상업적 공유 (링크 공유 권장) ## 금지 - 본 스킬 모음 또는 그 수정본의 재판매,..."
+```
+
+**Supported:** Arabic, Chinese, Czech, Dutch, English, French, German, Greek,
+Hebrew, Hindi, Indonesian, Italian, Japanese, Korean, Persian, Polish,
+Portuguese, Romanian, Russian, Spanish, Swedish, Thai, Turkish, Ukrainian,
+Vietnamese.
+
+**How it works.** Word order is the real problem, not vocabulary. Korean lists
+the prohibited acts first and negates once at the end; German splits the verb;
+Arabic and Hebrew read right-to-left. So instead of matching phrases, pkgguard
+looks for two *concepts* co-occurring in a short window — a commercial-use term
+and a prohibition term, **in either order**. Adding a language means adding two
+short word lists, not encoding its grammar.
+
+It also catches *gated* commercial use ("commercial use requires a separate
+license"), which is legally a gate rather than a ban but answers "can I ship
+this for free today?" the same way.
+
+**On false positives.** Calling MIT non-commercial would be worse than missing a
+restriction — it trains you to ignore ⚠️. Every language ships a paired test
+asserting its *permissive* phrasing is **not** flagged ("상업적 이용을
+허용합니다", "Die kommerzielle Nutzung ist gestattet", …), and the suite is
+validated against the real `LICENSE` files of React, Kubernetes, Rust, Django,
+PyTorch and others: **0 false positives**.
+
+> Findings are written in English. The *detection* is multilingual; the report
+> is not yet localised. If you'd like localised output, open an issue — it is a
+> deliberate scope call, not an oversight.
 
 ## 📦 Install
 
