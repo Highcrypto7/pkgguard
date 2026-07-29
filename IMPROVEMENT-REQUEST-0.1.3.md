@@ -161,3 +161,43 @@ Django, PyTorch and others.
 - **Language coverage is vocabulary, not grammar** — Bengali, Swahili, Tagalog,
   Malay and others are absent simply because nobody has added the two word lists
   yet. This is the cheapest possible contribution and a good first issue.
+
+---
+
+## ✅ Partially closed in 0.3.0 — agent-skill scanning (`--skills`)
+
+Item #1 (agent-config mutation) is **half** closed. The new `skill_scan` check
+detects writes to `.claude/`, `CLAUDE.md`, `mcp.json`, `.cursor/` **inside a
+SKILL.md**, plus three shapes that were not on the original list at all:
+credential exfiltration, stealth instructions, and encoded payloads.
+
+**What the real-world audit showed (21 skill repos from the source library):**
+zero malicious skills — and **two low-risk true positives that expose the
+remaining precision gap**:
+
+- `alexzio00/sovereign-skills` — `Save to ~/.claude/collab-audits/YYYY-MM-DD.md`
+  → writing its *own output* under `.claude/`, not touching configuration.
+- `addyosmani/agent-skills` — `Add the following to your project's .mcp.json`
+  → the standard, manual MCP install instruction every legitimate server ships.
+
+**So the distinction called out in item #1 is still unsolved:** *"auto-detect and
+write to many, unprompted"* vs *"tell the user to add one entry"*. The current
+rule cannot tell them apart and grades both MEDIUM.
+
+**Still open, refined:**
+- **Separate data writes from config writes.** `.claude/<something>/output.md` is
+  a skill storing results; `.claude/settings.json` or a rules file is a skill
+  changing how every agent behaves. Path shape distinguishes them cheaply.
+- **Separate imperative from instructional.** "Add the following to your config"
+  addresses the *human*; "auto-detect every agent config and inject" addresses
+  the *agent*. Second person + a manual-step framing is the signal.
+- **Item #1's original suggestion still stands for packages** (not skills):
+  extend `source_scan` to look for these paths in install/postinstall entry
+  points, where a file write is concrete evidence rather than prose.
+
+**Also learned (process, not product):** the first `skill_scan` implementation
+paired signals document-wide and produced 5 false positives on `anthropics/skills`
+and `obra/superpowers` while every synthetic unit test passed. **Synthetic tests
+cannot validate a precision-critical heuristic — only a real corpus can.** Any
+future check of this kind should be run against a known-good corpus before it
+ships.
