@@ -21,6 +21,8 @@ class CheckContext:
     deep_source: bool = False
     # Scan README/description for abuse/attack *purpose* signals. Opt-in.
     policy: bool = False
+    # Fetch SKILL.md files and scan the instructions themselves. Opt-in.
+    skills: bool = False
     # Thresholds (kept here so they're easy to tune / override).
     typosquat_min_ratio: float = 0.82   # similarity above which we warn
     stale_days_warn: int = 365          # no commits in this long -> stale

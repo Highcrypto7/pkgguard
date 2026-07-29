@@ -23,6 +23,7 @@ def vet_items(
     deep_fake_stars: bool = False,
     deep_source: bool = False,
     policy: bool = False,
+    skills: bool = False,
     github_token: Optional[str] = None,
     use_cache: bool = True,
     cache_ttl: float = 24 * 3600,
@@ -44,7 +45,7 @@ def vet_items(
         cache=disk,
     )
     ctx = CheckContext(http=http, offline=offline, deep_fake_stars=deep_fake_stars,
-                       deep_source=deep_source, policy=policy)
+                       deep_source=deep_source, policy=policy, skills=skills)
     pipeline = checks if checks is not None else build_checks()
 
     report = Report()

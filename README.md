@@ -74,6 +74,7 @@ finding sets the verdict, so a single command gives you one clear answer per ite
 | **Typosquat + homoglyph** | 1–2 edits from a popular package (`reqeusts`→`requests`) and digit/letter look-alikes (`dj4ng0`→`django`) |
 | **Known vulnerabilities** | Open CVEs/advisories for the resolved version via [OSV.dev](https://osv.dev) (GHSA / PyPA / RustSec / RubySec…) |
 | **Source malware scan** *(opt-in `--scan`)* | Statically inspects the package archive for install-time code execution, obfuscated payloads, `child_process`/`os.system`, credential access — **without ever running it** |
+| **Agent skills** | Malicious `SKILL.md` instructions — credential exfiltration, stealth directives, agent-config writes, encoded payloads (`--skills`) |
 | **License traps** | AGPL / SSPL / BUSL / CC-BY-NC / fair-code / "no license" — and **custom / NOASSERTION non-commercial licenses** (reads the raw LICENSE text; common for AI model repos). **Detects restrictions in 25 languages**, not just English — see below |
 | **Maintenance** | Archived, disabled, deprecated, or long-abandoned projects |
 | **Popularity** | Download counts as a legitimacy signal |
@@ -85,6 +86,42 @@ finding sets the verdict, so a single command gives you one clear answer per ite
 **Supported ecosystems:** PyPI · npm · crates.io · Go modules · RubyGems · Packagist · NuGet · pub.dev — plus GitHub repos.
 
 ---
+
+## 🛡️ Agent-skill security (`--skills`)
+
+A skill is a folder with a `SKILL.md` full of instructions your agent follows —
+**with your permissions, on your machine, next to your credentials.** Installing
+one off a leaderboard is closer to running a stranger's shell script than to
+adding a dependency.
+
+That surface is now the problem: an independent audit of 2,857 published skills
+found roughly **12% malicious**, and Trail of Bits bypassed the existing
+malicious-skill detectors using prompt injection and bytecode-hidden payloads.
+
+```bash
+pkgguard --skills owner/repo
+```
+
+Four rules, each requiring its signals to co-occur inside a short window:
+
+| Rule | Fires on |
+|---|---|
+| `credential-exfil` | reads a secret **and** sends it off-machine, in one instruction |
+| `stealth-instruction` | "do not tell the user", "skip the confirmation prompt" |
+| `agent-config-write` | writes into `.claude/`, `CLAUDE.md`, `mcp.json`, `.cursor/` … |
+| `encoded-payload` | a base64 blob plus a decode step, inside an instruction file |
+
+**Why proximity matters.** The first version paired signals anywhere in the same
+document and produced five findings against `anthropics/skills` and
+`obra/superpowers` — *all false*. An API-reference skill names
+`ANTHROPIC_API_KEY` in one paragraph and a URL in another; "silently" shows up in
+ordinary prose. Synthetic tests passed; only real repos exposed it. Rewritten to
+require proximity and imperative phrasing: **0 findings across four real skill
+repos, all six malicious shapes still caught.**
+
+> This is a heuristic, not an audit. It never emits ❌ on its own — it quotes the
+> line and leaves the judgment to you. **Read the `SKILL.md` before installing;
+> that reading is the entire security model.**
 
 ## 🌍 License checks work in 25 languages
 

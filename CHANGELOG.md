@@ -3,6 +3,54 @@
 All notable changes to pkgguard are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.3.0]
+
+**Agent-skill security scanning (`--skills`).** Skills became the dominant
+install surface for AI agents during 2026 and the security story did not keep
+up: an independent audit of 2,857 published skills found roughly 12% malicious,
+and Trail of Bits bypassed the existing malicious-skill detectors with prompt
+injection and bytecode-hidden payloads.
+
+### Added
+- **`checks/skill_scan.py` + `--skills`** — fetches a repo's `SKILL.md` files
+  and scans the *instructions themselves*. Four rules, each requiring signals to
+  co-occur within a ~200-character window:
+  - `credential-exfil` — reads a secret and sends it off-machine in one instruction
+  - `stealth-instruction` — tells the agent to act without informing the user,
+    or to skip a confirmation prompt
+  - `agent-config-write` — writes into `.claude/`, `CLAUDE.md`, `mcp.json`,
+    `.cursor/` and friends (the config that steers every agent on the machine)
+  - `encoded-payload` — a base64 blob plus a decode step, inside a file whose
+    entire purpose is human-readable text
+- **`github.fetch_skill_files()`** — one recursive tree call locates `SKILL.md`
+  files, contents fetched per file and capped. Needed because `source_scan`
+  only ever sees PyPI/npm archives and filters to code extensions, so a skill —
+  a GitHub folder of markdown — was previously invisible to every check.
+
+### Why this needed its own check
+`source_scan` downloads an archive and walks an AST. A malicious skill has no
+archive and no code: its payload is plain English telling the agent to read a
+credential and post it somewhere. And unlike a library, a skill runs **with your
+agent's permissions, on your machine, next to your credentials** — the agent
+follows it because following instructions is the point.
+
+### On precision (the part that took the work)
+The first implementation paired signals **anywhere in the same document**. Run
+against real skills it produced 5 findings on `anthropics/skills` and
+`obra/superpowers` — *all false*: an API-reference skill mentions
+`ANTHROPIC_API_KEY` in one paragraph and a URL in another; the word "silently"
+appears in ordinary prose; a "Reading guide: start with …md" line read as a
+config write. Synthetic tests had passed. Only real repos exposed it.
+
+Rewritten to require proximity and imperative phrasing. Now: **0 findings across
+four real skill repos, all six malicious shapes still detected.** A noisy check
+here is worse than none — it trains the operator to skim past ⚠️, which is the
+exact failure this tool exists to prevent.
+
+### Tests
+- **156 → 167.** Every malicious shape is paired with a benign skill using the
+  same vocabulary innocently, which must not fire.
+
 ## [0.2.1]
 
 Docs and discoverability only — no behaviour change.

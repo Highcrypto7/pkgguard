@@ -36,6 +36,7 @@ def build_checks() -> List[Check]:
     from .source_scan import SourceScanCheck
     from .fake_stars import FakeStarsCheck
     from .policy import PolicyCheck
+    from .skill_scan import SkillScanCheck
 
     return [
         ExistenceCheck(),      # 1. does it even exist? (resolves repo_url)
@@ -49,4 +50,5 @@ def build_checks() -> List[Check]:
         SourceScanCheck(),     # 9. static source IOC scan (opt-in --scan)
         FakeStarsCheck(),      # 10. star inflation (needs stargazers; opt-in)
         PolicyCheck(),         # 11. abuse/attack purpose heuristic (opt-in --policy)
+        SkillScanCheck(),      # 12. malicious agent-skill instructions (opt-in --skills)
     ]

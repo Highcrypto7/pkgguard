@@ -2,8 +2,15 @@
 
 from __future__ import annotations
 
-from .api import fetch_license_text, fetch_readme, fetch_repo, fetch_stargazers_sample
+from .api import (
+    fetch_license_text,
+    fetch_readme,
+    fetch_repo,
+    fetch_skill_files,
+    fetch_stargazers_sample,
+)
 
 __all__ = [
     "fetch_repo", "fetch_stargazers_sample", "fetch_license_text", "fetch_readme",
+    "fetch_skill_files",
 ]

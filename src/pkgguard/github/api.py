@@ -124,3 +124,38 @@ def fetch_stargazers_sample(
         if last_page > 1:
             timestamps += _star_page(http, owner, repo, last_page)
     return {"timestamps": sorted(timestamps), "sampled": len(timestamps)}
+
+def fetch_skill_files(
+    http: HttpClient, owner: str, repo: str, limit: int = 12
+) -> Dict[str, str]:
+    """Return {path: text} for the repo's SKILL.md files, or {}.
+
+    Agent skills ship as a folder with a ``SKILL.md`` inside, distributed via
+    GitHub rather than PyPI/npm — so ``fetch_source_files`` never sees them, and
+    the payload of a malicious skill is usually *the instructions themselves*
+    (plain markdown telling the agent to read a credential and POST it), not
+    compiled code. That combination is why this needs its own fetch.
+
+    One recursive tree call locates the files; contents are fetched per file and
+    capped, so a skill monorepo with hundreds of entries cannot blow up the run.
+    """
+    default_branch = "HEAD"
+    tree = http.get_json_or_none(
+        f"{API}/repos/{owner}/{repo}/git/trees/{default_branch}?recursive=1"
+    )
+    if not isinstance(tree, dict):
+        return {}
+    paths = [
+        n.get("path", "")
+        for n in (tree.get("tree") or [])
+        if isinstance(n, dict)
+        and n.get("type") == "blob"
+        and n.get("path", "").rsplit("/", 1)[-1].upper() == "SKILL.MD"
+    ]
+    out: Dict[str, str] = {}
+    for path in paths[:limit]:
+        data = http.get_json_or_none(f"{API}/repos/{owner}/{repo}/contents/{path}")
+        text = _decode_content(data) if data else None
+        if text:
+            out[path] = text
+    return out
